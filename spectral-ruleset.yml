@@ -1,0 +1,1232 @@
+---
+description: This set of rules ensures consistency in API specs.
+formats:
+  - oas3 # OpenAPI 3.X
+  - aas2 # AsyncAPI 2.X (no 3.X yet)
+extends:
+  - spectral:oas
+  - spectral:asyncapi
+aliases:
+  # Alias terminology
+  # "Objects" means that we return k-v pairs: `[{"object": {"k1": "v1"}}, ...]`
+  # "Properties" means that we return the values of the k-v pairs: `[{"k1": "v1"}, ...]`
+  # "Keys" means that we return the keys of the k-v pairs: `["k1", ...]`
+  # "All_" aliases find all objects of that data type (except for extensions at the root level)
+  BaseProperties:
+    description: By using this BaseProperties, we can omit extensions at the root.
+    targets:
+      - formats:
+          - oas3.0
+        given:
+          - $[openapi,info,servers,paths,components,security,tags,externalDocs]
+      - formats:
+          - oas3.1
+        given:
+          - $[openapi,info,jsonSchemaDialect,servers,paths,webhooks,components,security,tags,externalDocs]
+      - formats:
+          - aas2
+        given:
+          - $[asyncapi,id,info,servers,defaultContentType,channels,operations,components]
+  API_Document:
+    description: "The complete API specification document. This can be used to
+      target any part of the OpenAPI document using **field**.
+
+      *Use this if you don't find specific targets that cater to your
+      usecase.* "
+    targets:
+      - formats:
+          - aas2
+          - oas3
+        given:
+          - "#BaseProperties"
+  API_Info:
+    targets:
+      - formats:
+          - aas2
+          - oas3
+        given:
+          - $.info
+  All_Arrays:
+    targets:
+      - formats:
+          - aas2
+          - oas3
+        given:
+          - '#BaseProperties[?(@.type=="array")]'
+      - formats:
+          - oas3.0
+        given:
+          - '#BaseProperties..[?(@.type=="array")]'
+          - "#BaseProperties..[?(@.type && @.type.constructor.name === 'Array' &&
+            @.type.includes('array'))]"
+  All_Integers:
+    targets:
+      - formats:
+          - aas2
+          - oas3.0
+        given:
+          - '#BaseProperties..[?(@.type=="integer")]'
+      - formats:
+          - oas3.1
+        given:
+          - '#BaseProperties..[?(@.type=="integer")]'
+          - '#BaseProperties..[?(@.type && @.type.constructor.name === "Integer" &&
+            @.type.includes("integer"))]'
+  All_Numbers:
+    targets:
+      - formats:
+          - aas2
+          - oas3.0
+        given:
+          - '#BaseProperties..[?(@.type=="number")]'
+      - formats:
+          - oas3.1
+        given:
+          - '#BaseProperties..[?(@.type=="number")]'
+          - '#BaseProperties..[?(@.type && @.type.constructor.name === "Number" &&
+            @.type.includes("number"))]'
+  All_Objects:
+    targets:
+      - formats:
+          - aas2
+          - oas3
+        given:
+          - "#BaseProperties..[?(@.type=='object')]"
+  All_Strings:
+    targets:
+      - formats:
+          - aas2
+          - oas3.0
+        given:
+          - '#BaseProperties..[?(@.type=="string")]'
+      - formats:
+          - oas3.1
+        given:
+          - '#BaseProperties..[?(@.type=="string")]'
+          - '#BaseProperties..[?(@.type && @.type.constructor.name === "Array" &&
+            @.type.includes("string"))]'
+  Describable_Objects:
+    targets:
+      - formats:
+          - aas2
+        given:
+          - $.info
+          - $.channels[*]
+          - $.components.schemas[*]
+      - formats:
+          - oas3
+        given:
+          - $.info
+          - $.tags[*]
+          - $.paths[*][*].responses[*]
+          - $..parameters[?(@.in)]
+          - $.components.schemas[*]
+          - "#Server_Properties"
+  Enum_Values:
+    targets:
+      - formats:
+          - aas2
+          - oas3
+        given:
+          - "#BaseProperties..[?(@.type=='string')].[enum,x-extensible-enum].*"
+  JWT:
+    targets:
+      - formats:
+          - oas3
+        given:
+          - $.components.securitySchemes[?(@.type=="oauth2")]
+          - $.components.securitySchemes[?((@.bearerFormat=="jwt" ||
+            @.bearerFormat=="JWT"))]
+  Media_Type_Object_Properties:
+    targets:
+      - formats:
+          - oas3
+        given:
+          - $.paths[*][*].requestBody.content[*]
+          - $.paths[*][*].responses[*].content[*]
+  Parameters_In_Operations:
+    description: This specifically finds parameters that are in operations rather than the path.
+    targets:
+      - formats:
+          - oas3
+        given:
+          - $.paths[*][*].parameters[?(@.in == 'path')]
+  Parameter_Properties:
+    targets:
+      - formats:
+          - oas3
+        given:
+          - $.paths[*]..parameters[*]
+  Path_Objects:
+    targets:
+      - formats:
+          - oas3
+        given:
+          - $.paths
+  Path_Parameter_Names:
+    targets:
+      - formats:
+          - oas3
+        given:
+          - $.paths[*].parameters[?(@.in == 'path')].name
+          - $.paths[*][*].parameters[?(@.in == 'path')].name
+          - $.components.parameters[?(@.in == 'path')].name
+  Path_Parameter_Properties:
+    description: Properties of objects which are parameters in paths
+    targets:
+      - formats:
+          - oas3
+        given:
+          - $..parameters[?(@.in == 'path')]
+  Path_Properties:
+    targets:
+      - formats:
+          - oas3
+        given:
+          - $.paths[*]
+  Property_Keys:
+    targets:
+      - formats:
+          - aas2
+        given:
+          - $..properties.*~
+      - formats:
+          - oas3
+        given:
+          - $.paths.*.*[responses,requestBody]..content..schema..properties.*~
+  Public_Id_Properties:
+    description: IDs that are part of paths
+    targets:
+      - formats:
+          - oas3
+        given:
+          - $.paths..parameters[*][?(@property === "name" && (@ === "id" ||
+            @.match(/(_id|Id|-id)$/)))]^.schema
+      - formats:
+          - aas2
+        given:
+          - $.paths..parameters[*][?(@property === "name" && (@ === "id" ||
+            @.match(/(_id|Id|-id)$/)))]^.schema
+  Query_Parameter_Keys:
+    targets:
+      - formats:
+          - oas3
+        given:
+          - $.paths[*].parameters[?(@.in == 'query')].name
+          - $.paths[*][*].parameters[?(@.in == 'query')].name
+          - $.components.parameters[?(@.in == 'query')].name
+  Server_Properties:
+    description: API hosts defined in the API specification
+    targets:
+      - formats:
+          - oas3
+        given:
+          - $.servers[*]
+          - "#Path_Properties.servers[*]"
+          - "#Path_Properties[get,put,post,delete,options,head,patch,trace].responses.servers[*]"
+  Server_URLs:
+    targets:
+      - formats:
+          - oas3
+        given:
+          - "#Server_Properties.url"
+  Shared_Schema_Keys:
+    description: The model names in our schemas
+    targets:
+      - formats:
+          - aas2
+        given:
+          - $.components.[messages,schemas][*]~
+      - formats:
+          - oas3
+        given:
+          - $.components.schemas[*]~
+
+rules:
+  # Required fields/properties
+  components-property-in-root-required:
+    given: $
+    message: The root object must have a `components` property
+    severity: error
+    then:
+      field: components
+      function: defined
+  format-for-numbers-required:
+    given:
+      - "#All_Numbers"
+    message: Number properties must have valid format specified
+    severity: warn
+    then:
+      - field: format
+        function: defined
+      - field: format
+        function: enumeration
+        functionOptions:
+          values:
+            - float
+            - double
+  info-title-required:
+    description: |
+      The `info` object must have a `title` property defined.
+      **Valid Example**
+      ```yaml lineNumbers
+      info:
+        title: Payments API
+        ...
+      ```
+      [Zalando Guideline 218](https://opensource.zalando.com/restful-api-guidelines/#218)
+    given:
+      - "#API_Info"
+    message: Must have API title defined in `info.title`
+    severity: error
+    then:
+      field: title
+      function: truthy
+  info-version-required:
+    description: |
+      The `info` object must have a `version` property that follows [semantic rules](http://semver.org/spec/v2.0.0.html) to distinguish API versions.
+      **Invalid Example**
+      ```yaml lineNumbers
+      info:
+        title: ...
+        description: ...
+        version: 1
+        <...>
+      ```
+      **Valid Example**
+      ```yaml lineNumbers
+      info:
+        title: ...
+        description: ...
+        version: 1.1.0
+        ...
+      ```
+      [Zalando Guideline 218](https://opensource.zalando.com/restful-api-guidelines/#218) and [Zalando Guideline 116](https://opensource.zalando.com/restful-api-guidelines/#116)
+    given:
+      - "#API_Info"
+    message: Must have API version defined in `info.version`
+    severity: error
+    then:
+      - field: version
+        function: defined
+      - field: version
+        function: schema
+        functionOptions:
+          schema:
+            pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*)?$"
+            type: string
+  servers-property-in-root-required:
+    given: $
+    message: The root object must have a `servers` property
+    severity: error
+    then:
+      field: servers
+      function: defined
+  tags-property-in-root-required:
+    given: $
+    message: The root object must have a `tags` property
+    severity: error
+    then:
+      field: tags
+      function: defined
+
+  # Rules for logical / consistency errors
+  array-has-items:
+    description: |-
+      Schemas with `type: array`, require a sibling `items` field.
+      **Recommended:** Yes
+      **Good Example**
+      ```yaml
+      TheGoodModel:
+        type: object
+        properties:
+          favoriteColorSets:
+            type: array
+            items:
+              type: array
+              items: {}
+      ```
+      **Bad Example**
+      ```yaml
+      TheBadModel:
+        type: object
+        properties:
+          favoriteColorSets:
+            type: array
+            items:
+              type: array
+      ```
+    given:
+      - "#All_Arrays"
+    message: 'Schemas with "type: array", require a sibling "items" field'
+    severity: error
+    then:
+      field: items
+      function: truthy
+  double-slash-in-path:
+    description: "Path segments must not contain duplicate slashes.
+
+      **Invalid Example* ```yaml /user//report: ``` **Valid Example*
+      ```yaml /beach-report: ```
+
+      [Zalando Guideline
+      136](https://opensource.zalando.com/restful-api-guidelines/#136)"
+    given:
+      - "#Path_Objects"
+    message: Empty path segments are not allowed
+    severity: error
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: "//"
+  incorrect-integer-format:
+    message: "Incorrect integer format: {{value}}. Must be one of: int32, int64"
+    severity: error
+    given: "#All_Integers"
+    then:
+      field: format
+      function: enumeration
+      functionOptions:
+        values:
+          - int32
+          - int64
+  incorrect-string-format:
+    message: "Incorrect string format: {{value}}."
+    severity: error
+    given: "#All_Strings"
+    then:
+      field: format
+      function: enumeration
+      functionOptions:
+        values:
+          - date-time
+          - date
+          - time
+          - email
+          - uri
+          - uuid
+          - base64
+          - binary
+          - regex
+          - lang
+          - country
+          - currency
+          - color
+  no-delete-request-body:
+    message: There must be no request body for DELETE
+    severity: error
+    given: "$.paths.*.delete"
+    then:
+      field: requestBody
+      function: falsy
+  no-get-request-body:
+    message: There must be no request body for GET
+    severity: error
+    given: "$.paths.*.get"
+    then:
+      field: requestBody
+      function: falsy
+  no-oneOf:
+    description: "Usage of 'oneOf' is not allowed as openapi-generator does
+      not properly generate code supporting polymorphism."
+    severity: error
+    given: "$..oneOf"
+    message: Usage of 'oneOf' is not allowed
+    then:
+      function: falsy
+  paths-no-file-extensions:
+    description: 'Paths must not include `json` or `xml` file extensions.
+
+      **Invalid Example* The path contains a `.json` extension. ```json
+      {     "/user.json": {        "post: }        .... } ``` **Valid
+      Example* ```json {     "/user": {        "post: }        .... } ```'
+    given:
+      - "#Path_Objects"
+    message: Paths must not have file extensions
+    severity: error
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: "\\b(JSON|json|XML|xml)\\b"
+  paths-no-http-verbs:
+    description: 'Verbs such as `get`, `delete`, and `put` must not be included in
+      paths because this information is conveyed by the HTTP method.
+
+      **Invalid Example* The path contains the verb `get`. ```json
+      {     "/getUsers": {        "post: }        .... } ``` **Valid Example*
+      ```json {     "/user": {        "post: }        .... } ```'
+    given:
+      - "#Path_Objects"
+    message: Paths must not have HTTP verbs in them
+    severity: error
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: "\\b(GET|PUT|POST|DELETE|LIST|CREATE|REMOVE|get|put|post|delete|list|\
+          create|remove|Get|Put|Post|Delete|List|Create|Remove)\\b"
+  paths-no-special-characters:
+    description: 'Paths should not contain special characters, such as `$` `&` `+`
+      `,` `;` `=` `?` and `@%`.
+
+      **Invalid Example* The path contains an ampersand. ```json
+      {     "/user&info": {        "post: }        .... } ``` **Valid
+      Example* ```json {     "/user": {        "post: }        .... } ```'
+    given:
+      - "#Path_Objects"
+    message: Avoid using special characters in paths
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        match: ""
+        notMatch: "^(.*)([\\$&+,;=?@%]+)(.*)$"
+
+  # Rules for documentation
+  docs-descriptions:
+    severity: warn
+    description: "Descriptions should be provided for describable objects, such as
+      `tags`, `operations`, `parameters`, and more. Descriptions should
+      be a minimum of 20 characters, start with a capital letter.
+
+      Documentation tools render descriptions to provide more context to
+      users of the API who are not as familiar with the concepts as the API
+      designers are.
+
+      **Invalid Example* This example is invalid because the description
+      is too short and does not end with a period.
+
+      ```yaml responses:   '200':      description: User Found ```
+
+      **Valid Example* This example is valid because it contains more than
+      20 characters and ends with a period.
+
+      ```yaml responses:   '200':      description: User with matching
+      last name found. ```"
+    given:
+      - "#Describable_Objects"
+    message: "Missing a description: {{path}}."
+    then:
+      field: description
+      function: truthy
+  docs-media-types-examples-or-schema:
+    description: "Media object must contain a defined schema or examples.
+
+      Without providing a well-defined schema or examples, API consumers
+      do not have the information they need to interact with the API.
+
+      **Invalid Example* This example is invalid because a schema and
+      examples are not defined.
+
+      ```yaml get:   responses:     '200':       description: User
+      Found       content:         application/json: ```
+
+      **Valid Example* This example is valid because a schema and examples
+      are defined.
+
+      ```yaml get:   responses:     '200':       description: User
+      Found       content:         application/json:           schema:            \
+      $ref: '#/components/schemas/User'          examples:            Get User
+      Alice Smith:               value:                id:
+      142                firstName: Alice                lastName:
+      Smith                email:
+      alice.smith@gmail.com                dateOfBirth:
+      '1997-10-31'                emailVerified: true                signUpDate:
+      '2019-08-24' ```\n"
+    given:
+      - "#Media_Type_Object_Properties"
+    message: No example or schema provided for {{property}}
+    severity: warn
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required:
+                - example
+            - required:
+                - examples
+            - required:
+                - schema
+          type: object
+  docs-parameters-examples-or-schema:
+    description: " **OAS 3.x only* Path parameter must contain a defined schema or
+      examples.
+
+      Without providing a well-defined schema or examples, API consumers
+      do not have the information they need to interact with the API.
+
+      **Invalid Example* This example is invalid because a schema or
+      example is not defined.
+
+      ```yaml paths:   '/users/{userId}':     parameters:       - name:
+      userId         in: path ```
+
+      **Valid Example* This example is valid because a schema or example
+      is defined.
+
+      ```yaml paths:   '/users/{userId}':     parameters:       -
+      schema:           type: integer           example: 1236         name:
+      userId         in: path ```"
+    given:
+      - "#Parameter_Properties"
+    message: No example or schema provided for {{property}}
+    severity: warn
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          oneOf:
+            - required:
+                - example
+            - required:
+                - examples
+            - required:
+                - schema
+          type: object
+
+  # Rules for formatting/style
+  alphabetical-tags:
+    description: 'Global tags specified at the root OpenAPI Document level should be
+      in alphabetical order based on the `name` property.
+
+      **Invalid Example* ```json lineNumbers
+      {    "tags":[       {          "name":"Z Global
+      Tag"       },       {          "name":"A Global Tag"       }    ] }
+      ```
+
+      **Valid Example* ```json lineNumbers
+      {    "tags":[       {          "name":"A Global
+      Tag"       },       {          "name":"Z Global Tag"       }    ] }
+      ```'
+    given:
+      - "#API_Document"
+    message: OpenAPI object should have alphabetical "tags".
+    then:
+      field: tags
+      function: alphabetical
+      functionOptions:
+        keyedBy: name
+  api-as-base-path:
+    description: "Base path should not include `api`.
+
+      **Invalid Example* ```yaml /api/user: ```
+
+      **Valid Example* ```yaml /user: ``` [Zalando Guideline
+      135](https://opensource.zalando.com/restful-api-guidelines/#135)"
+    given:
+      - "#Path_Objects"
+    message: Path should not start with /api
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: "^/api"
+  path-parameters-on-path-only:
+    description: 'Path parameters should be defined on the path level instead of the
+      operation level.
+
+      **Invalid Example* The `user_id` path parameter on line 8 should not
+      be included with the `patch'' operation.
+
+      ```json lineNumbers {       "patch": {       "parameters":
+      [         {           "schema": {           "type":
+      "integer"          },         "name": "user_id",         "in":
+      "path"       }     ]   } } ```
+
+      **Valid Example* The `user-id` path parameter is correctly located
+      at the path level.
+
+      ```json lineNumbers
+
+      {     "paths": {        "/users/{userId}":
+      {          "parameters": [            {              "schema":
+      {                "type":
+      "integer"            },              "name":
+      "user_id",              "in":
+      "path"            }        ]      }    }  } ```'
+    given:
+      - "#Parameters_In_Operations"
+    message: Path parameters should be defined on the path level instead of the
+      operation level.
+    then:
+      function: falsy
+  paths-no-trailing-slash:
+    description: 'Paths must not end with a trailing slash. `/users` and `/users/`
+      are separate paths. It''s considered bad practice for them to differ based
+      only on a trailing slash. It''s usually preferred to not have a trailing
+      slash.
+
+      **Invalid Example* The `users` path ends with a slash. ```json
+      {     "/users/": {        "post: }        .... } ``` **Valid Example*
+      ```json {     "/user": {        "post: }        .... } ```'
+    given:
+      - "#Path_Objects"
+    message: Paths must not end with a trailing slash
+    severity: error
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        notMatch: "\\/$"
+  plain-id-as-path-parameter:
+    message: Path parameter names should be "resource-id", not just "id"
+    severity: warn
+    given: "#Path_Parameter_Properties"
+    then:
+      field: name
+      function: pattern
+      functionOptions:
+        notMatch: ^(id|Id|ID|iD)$
+  schema-in-name:
+    message: The schema name should not have "Schema" in it, this is redundant
+    severity: info
+    given: "$.components.schemas.*~"
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: (Schema)
+  server-lowercase:
+    description: |-
+      Server URLs must be lowercase. This standard helps meet industry best practices.
+      **Invalid Example**
+      The `name` property on line 8 (`user-Id`) must be separated by an underscore character and the `I` must be lowercase.
+      ```json
+      {
+          "servers": [
+            {
+              "url": "https://ACME.com/api"
+            }
+          ]
+      }
+      ```
+      **Valid Example**
+      ```json
+      {
+          "servers": [
+            {
+              "url": "https://acme.com/api"
+            }
+          ]
+      }
+      ```
+    given:
+      - "#Server_URLs"
+    message: Server URL must be lowercase
+    severity: warn
+    then:
+      function: pattern
+      functionOptions:
+        match: "^[^A-Z]*$"
+  server-no-trailing-slash:
+    description: 'Server URLs should not end in forward slashes. This is a best
+      practice for working with web tooling, such as mock servers, code
+      generators, application frameworks, and more).
+
+      **Invalid Example* ```json lineNumbers {   "servers":
+      [     {       ... ,       "url":
+      "https://api.openweathermap.org/data/2.5/"     }   ] } ```
+
+      **Valid Example* ```json lineNumbers {   "servers":
+      [     {       ... ,       "url":
+      "https://api.openweathermap.org/data/2.5"     }   ] } ```'
+    given:
+      - "#Server_URLs"
+    message: Server URL should not have trailing slash
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "/$"
+  server-not-example:
+    description: 'Server URLs must not direct to example.com. This helps ensure URLs
+      are valid before you distribute your API document.
+
+      **Invalid Example* ```json lineNumbers {   "servers":
+      [     {       ... ,       "url": "https://example.com"     }   ] } ```
+
+      **Valid Example* ```json lineNumbers {   "servers":
+      [     {       ... ,       "url":
+      "https://api.openweathermap.org/data/2.5"     }   ] } ```'
+    given:
+      - "#Server_URLs"
+    message: Server URL must not point at example.com.
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: example.com
+
+  # Rules for responses
+  delete-responses-204:
+    message: A DELETE operation should have a 204 status code with the response
+    severity: warn
+    given: "$.paths[*].delete.responses"
+    then:
+      field: "204"
+      function: truthy
+  get-response-200:
+    message: A GET operation must have a 200 status code for the response
+    severity: warn
+    given: "$.paths[*].get.responses"
+    then:
+      field: "200"
+      function: truthy
+  post-response-201:
+    message: A POST operation should have a 201 status code for the response
+    severity: warn
+    given: "$.paths[*].post.responses"
+    then:
+      field: "201"
+      function: truthy
+  put-response-204:
+    message: A PUT operation should have a 204 status code for the response
+    severity: warn
+    given: "$.paths[*].put.responses"
+    then:
+      field: "204"
+      function: truthy
+  use-standard-response-codes:
+    message: Response codes must be limited to a small predefined set of HTTP status codes
+    severity: error
+    given: $.paths.*.*.responses.*~
+    then:
+      function: enumeration
+      functionOptions:
+        values:
+          - "200"
+          - "201"
+          - "202"
+          - "204"
+          - "400"
+          - "401"
+          - "403"
+          - "404"
+          - "405"
+          - "406"
+          - "409"
+          - "411"
+          - "415"
+          - "500"
+          - default
+
+  # Rules for casing
+  enum-values-pascal-case:
+    given:
+      - "#Enum_Values"
+    message: enum values must be in SCREAMING_SNAKE_CASE
+    then:
+      function: casing
+      functionOptions:
+        type: macro
+  header-parameters-hyphenated-pascal-case:
+    given:
+      - "$.paths.*.*.parameters[?(@.in=='header')].name"
+    message: "{{error}}"
+    then:
+      function: casing
+      functionOptions:
+        separator:
+          char: "-"
+        type: pascal
+  model-names-pascal-case:
+    description: "Model names must be in PascalCase"
+    type: "style"
+    given: "#Shared_Schema_Keys"
+    then:
+      function: casing
+      functionOptions:
+        type: pascal
+  path-case-kebab:
+    given:
+      - "$.paths"
+    message: Paths must be kebab-case
+    severity: error
+    then:
+      field: "@key"
+      function: pattern
+      functionOptions:
+        match: "^\\/([a-z0-9]+(-[a-z0-9]+)*)?(\\/[a-z0-9]+(-[a-z0-9]+)*|\\/{.+})*$"
+  path-parameters-kebab-case:
+    given:
+      - "#Path_Parameter_Names"
+    message: "{{error}}"
+    severity: error
+    then:
+      field: name
+      function: casing
+      functionOptions:
+        type: kebab
+  property-names-camel-case:
+    given:
+      - "#Property_Keys"
+    message: "{{error}}"
+    severity: error
+    then:
+      function: casing
+      functionOptions:
+        type: camel
+  query-parameters-kebab-case:
+    given:
+      - "#Query_Parameter_Keys"
+    message: "{{error}}"
+    severity: error
+    then:
+      function: casing
+      functionOptions:
+        type: kebab
+
+  # Rules for security
+  owasp:api1:2023-no-numeric-ids:
+    description: Use random IDs that cannot be guessed. UUIDs are preferred but any
+      other random string will do.
+    given:
+      - "#Public_Id_Properties"
+    severity: warn
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          not:
+            properties:
+              type:
+                const: integer
+          type: object
+  owasp:api2:2023-auth-insecure-schemes:
+    description: There are many [HTTP authorization
+      schemes](https://www.iana.org/assignments/http-authschemes/) but some of
+      them are now considered insecure, such as negotiating authentication using
+      specifications like NTLM or OAuth v1.
+    formats:
+      - oas3
+    given:
+      - $..[securitySchemes][?(@.type=="http")].scheme
+    message: "Authentication scheme is considered outdated or insecure: {{value}}."
+    severity: error
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^(negotiate|oauth)$"
+  owasp:api2:2023-jwt-best-practices:
+    description: |-
+      JSON Web Tokens RFC7519 is a compact, URL-safe, means of representing claims to be transferred between two parties. JWT can be enclosed in encrypted or signed tokens like JWS and JWE.
+      The [JOSE IANA registry](https://www.iana.org/assignments/jose/jose.xhtml) provides algorithms information.
+      RFC8725 describes common pitfalls in the JWx specifications and in
+      their implementations, such as:
+      - the ability to ignore algorithms, eg. `{"alg": "none"}`;
+      - using insecure algorithms like `RSASSA-PKCS1-v1_5` eg. `{"alg": "RS256"}`.
+      An API using JWT should explicit in the `description`
+      that the implementation conforms to RFC8725.
+      ```
+      components:
+        securitySchemes:
+          JWTBearer:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+            description: |-
+              A bearer token in the format of a JWS and conformato
+              to the specifications included in RFC8725.
+      ```
+    formats:
+      - oas3
+    given:
+      - $.components.securitySchemes[?(@.type=="oauth2")]
+      - $.components.securitySchemes[?((@.bearerFormat=="jwt" ||
+        @.bearerFormat=="JWT"))]
+    message: Security schemes using JWTs must explicitly declare support for RFC8725
+      in the description. (Add "RFC8725" to the description.)
+    severity: error
+    then:
+      - field: description
+        function: truthy
+      - field: description
+        function: pattern
+        functionOptions:
+          match: ".*RFC8725.*"
+  owasp:api2:2023-no-api-keys-in-url:
+    description: API Keys that are passed in headers, cookies or query parameters to
+      access APIs Those keys can be eavesdropped, especially when they are
+      passed in the URL as logging or history tools will keep track of them and
+      potentially expose them.
+    formats:
+      - oas3
+    given:
+      - $..[securitySchemes][?(@.type=="apiKey")].in
+    message: "API Key passed in URL: {{error}}."
+    severity: error
+    then:
+      function: pattern
+      functionOptions:
+        notMatch: "^(path|query)$"
+  owasp:api2:2023-no-credentials-in-url:
+    description: URL parameters MUST NOT contain credentials such as API key,
+      password, or secret.
+    formats:
+      - oas3
+    given:
+      - "$..parameters[?(@.in && @.in.match(/query|path/))].name"
+    message: "Security credentials detected in path parameter: {{value}}."
+    severity: error
+    then:
+      field: name
+      function: pattern
+      functionOptions:
+        notMatch: "/^.*(client_?secret|token|access_?token|refresh_?token|id_?token|pas\
+          sword|secret|api-?key).*$/i"
+  owasp:api2:2023-no-http-basic:
+    description: Basic authentication credentials transported over network are more
+      susceptible to interception than other forms of authentication, and as
+      they are not encrypted it means passwords and tokens are more easily
+      leaked.
+    formats:
+      - oas3
+    given:
+      - "$.components.securitySchemes[*]"
+    message: Security scheme uses HTTP Basic. Use a more secure authentication
+      method, like OAuth 2, or OpenID.
+    severity: error
+    then:
+      field: scheme
+      function: pattern
+      functionOptions:
+        notMatch: basic
+  owasp:api3:2023-constrained-additionalProperties:
+    description: "By default JSON Schema allows additional properties, which can
+      potentially lead to mass assignment issues, where unspecified fields are
+      passed to the API without validation. Disable them with
+      `additionalProperties: false` or add `maxProperties`"
+    formats:
+      - oas3_0
+    given:
+      - $..[?(@.type=="object" && @.additionalProperties
+        &&  @.additionalProperties!=true &&  @.additionalProperties!=false )]
+    message: Objects should not allow unconstrained additionalProperties.
+    then:
+      field: maxProperties
+      function: defined
+  owasp:api3:2023-constrained-unevaluatedProperties:
+    description: "By default JSON Schema allows unevaluated properties, which can
+      potentially lead to mass assignment issues, where unspecified fields are
+      passed to the API without validation. Disable them with
+      `unevaluatedProperties: false` or add `maxProperties`"
+    formats:
+      - oas3_1
+    given:
+      - $..[?(@.type=="object" && @.unevaluatedProperties
+        &&  @.unevaluatedProperties!=true &&  @.unevaluatedProperties!=false )]
+    message: Objects should not allow unconstrained unevaluatedProperties.
+    then:
+      field: maxProperties
+      function: defined
+  owasp:api3:2023-explicit-additionalProperties:
+    description: "By default JSON Schema allows additional properties, which can
+      potentially lead to mass assignment issues, where unspecified fields are
+      passed to the API without validation. Disable them with
+      `additionalProperties: false` or add `maxProperties`."
+    given:
+      - "#All_Objects"
+    message: additionalProperties must be set to false or true.
+    then:
+      field: additionalProperties
+      function: defined
+  owasp:api3:2023-explicit-unevaluatedProperties:
+    description: "By default JSON Schema allows unevaluated properties, which can
+      potentially lead to mass assignment issues, where unspecified fields are
+      passed to the API without validation. Disable them with
+      `unevaluatedProperties: false` or add `maxProperties`."
+    formats:
+      - oas3_1
+    given:
+      - $..[?(@.type=="object" && @.unevaluatedProperties)]
+    message: unevaluatedProperties must be set to false or true.
+    then:
+      field: additionalProperties
+      function: defined
+  owasp:api4:2023-array-limit:
+    description: Array size should be limited to mitigate resource exhaustion
+      attacks. This can be done using `maxItems`. You should ensure that the
+      subschema in `items` is constrained too.
+    given:
+      - "#All_Arrays"
+    message: Schema of type array must specify maxItems.
+    severity: warn
+    then:
+      field: maxItems
+      function: defined
+  owasp:api4:2023-integer-format:
+    description: Integers should be limited to mitigate resource exhaustion attacks.
+      Specifying whether int32 or int64 is expected via `format`.
+    given:
+      - "#All_Integers"
+    message: Schema of type integer must specify format (int32 or int64).
+    severity: warn
+    then:
+      field: format
+      function: defined
+  owasp:api4:2023-integer-limit:
+    description: "Integers should be limited to mitigate resource exhaustion
+      attacks. This can be done using `minimum` and `maximum`, which can with
+      e.g.: avoiding negative numbers when positive are expected, or reducing
+      unreasonable iterations like doing something 1000 times when 10 is
+      expected."
+    formats:
+      - oas3_1
+    given:
+      - "#All_Integers"
+    message: Schema of type integer must specify minimum and maximum.
+    severity: warn
+    then:
+      - function: xor
+        functionOptions:
+          properties:
+            - minimum
+            - exclusiveMinimum
+      - function: xor
+        functionOptions:
+          properties:
+            - maximum
+            - exclusiveMaximum
+  owasp:api4:2023-integer-limit-legacy:
+    description: "Integers should be limited to mitigate resource exhaustion
+      attacks. This can be done using `minimum` and `maximum`, which can with
+      e.g.: avoiding negative numbers when positive are expected, or reducing
+      unreasonable iterations like doing something 1000 times when 10 is
+      expected."
+    given:
+      - "#All_Integers"
+    message: Schema of type integer must specify minimum and maximum.
+    severity: warn
+    then:
+      - function: schema
+        functionOptions:
+          schema:
+            type: object
+            allOf:
+              - required:
+                  - minimum
+              - required:
+                  - maximum
+  owasp:api4:2023-string-limit:
+    description: String size should be limited to mitigate resource exhaustion
+      attacks. This can be done using `maxLength`, `format`, `enum` or `const`.
+    given:
+      - "#All_Strings"
+    message: Schema of type string must specify maxLength, enum, or const.
+    severity: warn
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required:
+                - maxLength
+            - required:
+                - enum
+            - required:
+                - const
+            - required:
+                - format
+          type: object
+  owasp:api7:2023-concerning-url-parameter:
+    description: |-
+      Using external resource based on user input for webhooks, file fetching from URLs, custom SSO, URL previews, or redirects, can lead to a wide variety of security issues.
+      Learn more about Server Side Request Forgery here: https://owasp.org/API-Security/editions/2023/en/0xa7-server-side-request-forgery/
+    formats:
+      - oas3
+    given:
+      - $.paths..parameters[*][?(@property === "name" && (@ === "callback" || @
+        === "redirect" || @.toString().match(/(_url|Url|-url)$/)))]^
+    message: Make sure to review the way this URL is handled to protect against
+      Server Side Request Forgery.
+    then:
+      function: undefined
+
+  # Rules coming from the default openapi set
+  # Listed here explicitly for visibility
+  duplicated-entry-in-enum: warn
+  no-$ref-siblings: error
+  no-eval-in-markdown: error
+  no-script-tags-in-markdown: error
+  openapi-tags-alphabetical: "off"
+  openapi-tags-uniqueness: error
+  operation-description: warn
+  operation-operationId: warn
+  operation-operationId-unique: error
+  operation-operationId-valid-in-url: warn
+  operation-parameters: warn # ensure params are unique and non-repeating
+  operation-singular-tag: warn
+  operation-success-response: warn
+  operation-tags: error
+  operation-tag-defined: error # tag in operation must be defined globally in tags
+  path-declarations-must-exist: error # no empty params in paths
+  path-keys-no-trailing-slash: warn
+  path-not-include-query: error
+  path-params: error # ensure each defined param is used & each used param is defined
+  tag-description: error
+  typed-enum: error # ensure enum values are the correct type
+  oas3-examples-value-or-externalValue: warn # can only have value or externalValue, not both
+  oas3-operation-security-defined: error # a defined security must match a scheme defined in securitySchemes
+  oas3-parameter-description: warn
+  oas3-schema: error
+  oas3-server-not-example.com: warn
+  oas3-server-trailing-slash: error
+  oas3-valid-media-example: error # example must be valid against schema
+  oas3-valid-schema-example: error # example must be valid against schema
+  # Listed in the doc, but do not actually exist
+  # oas3_callbacks_in_callbacks: warn
+  # oas3_1-callbacks-in-webhoook: warn
+  # Not available in the extension
+  # array-items: warn
+  # oas3_1-servers-in-webhook: warn
+  # oas3-server-variables: warn
+
+  # Rules coming from the default asyncapi set
+  asyncapi-channel-no-empty-parameter: error
+  asyncapi-channel-no-query-nor-fragment: error
+  asyncapi-channel-no-trailing-slash: error
+  asyncapi-channel-parameters: warn
+  asyncapi-channel-servers: warn
+  asyncapi-headers-schema-type-object: warn
+  asyncapi-latest-version: "off"
+  asyncapi-message-examples: warn
+  asyncapi-message-messageId-uniqueness: error
+  asyncapi-operation-description: warn
+  asyncapi-operation-operationId-uniqueness: warn
+  asyncapi-operation-operationId: warn
+  asyncapi-operation-security: warn
+  asyncapi-parameter-description: warn
+  asyncapi-payload-default: warn
+  asyncapi-payload-examples: warn
+  asyncapi-payload-unsupported-schemaFormat: warn
+  asyncapi-payload: warn
+  asyncapi-schema-default: warn
+  asyncapi-schema-examples: warn
+  asyncapi-schema: error
+  asyncapi-server-no-empty-variable: warn
+  asyncapi-server-no-trailing-slash: error
+  asyncapi-server-not-example-com: warn
+  asyncapi-server-security: warn
+  asyncapi-server-variables: warn
+  asyncapi-tag-description: warn
+  asyncapi-tags-alphabetical: warn
+  asyncapi-tags-uniqueness: error
+  asyncapi-unused-components-server: warn
+
+  # These rules are the same as spectral-public, they are the standard rules and must be explicitly overridden
+  asyncapi-info-contact: error
+  asyncapi-info-contact-properties: error
+  asyncapi-info-description: error
+  asyncapi-info-license: error
+  asyncapi-info-license-url: error
+  asyncapi-servers: error
+  asyncapi-tags: error
+  asyncapi-unused-components-schema: error
+  contact-properties: error
+  info-contact: error
+  info-description: error
+  info-license: error
+  license-url: error
+  oas3-api-servers: error
+  oas3-unused-component: error
+  openapi-tags: error
