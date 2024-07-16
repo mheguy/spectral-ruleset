@@ -1,0 +1,25 @@
+---
+description: This set of rules is for partial APIs which are only used for components.
+formats:
+  - oas3 # OpenAPI 3.X
+  - aas2 # AsyncAPI 2.X (no 3.X yet)
+extends:
+  - spectral:oas
+  - spectral:asyncapi
+rules:
+  asyncapi-info-contact: "off"
+  asyncapi-info-contact-properties: "off"
+  asyncapi-info-description: "off"
+  asyncapi-info-license: "off"
+  asyncapi-info-license-url: "off"
+  asyncapi-servers: "off"
+  asyncapi-tags: "off"
+  asyncapi-unused-components-schema: "off"
+  contact-properties: "off"
+  info-contact: "off"
+  info-description: "off"
+  info-license: "off"
+  license-url: "off"
+  oas3-api-servers: "off"
+  oas3-unused-component: "off"
+  openapi-tags: "off"

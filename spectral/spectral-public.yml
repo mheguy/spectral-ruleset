@@ -1,0 +1,25 @@
+---
+description: This set of rules is for APIs which are publicly accessible.
+formats:
+  - oas3 # OpenAPI 3.X
+  - aas2 # AsyncAPI 2.X (no 3.X yet)
+extends:
+  - spectral:oas
+  - spectral:asyncapi
+rules:
+  asyncapi-info-contact: error
+  asyncapi-info-contact-properties: error
+  asyncapi-info-description: error
+  asyncapi-info-license: error
+  asyncapi-info-license-url: error
+  asyncapi-servers: error
+  asyncapi-tags: error
+  asyncapi-unused-components-schema: error
+  contact-properties: error
+  info-contact: error
+  info-description: error
+  info-license: error
+  license-url: error
+  oas3-api-servers: error
+  oas3-unused-component: error
+  openapi-tags: error

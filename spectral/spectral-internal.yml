@@ -1,0 +1,25 @@
+---
+description: This set of rules is for APIs which are only accessible internally.
+formats:
+  - oas3 # OpenAPI 3.X
+  - aas2 # AsyncAPI 2.X (no 3.X yet)
+extends:
+  - spectral:oas
+  - spectral:asyncapi
+rules:
+  asyncapi-info-contact: warn
+  asyncapi-info-contact-properties: warn
+  asyncapi-info-description: warn
+  asyncapi-info-license: warn
+  asyncapi-info-license-url: warn
+  asyncapi-servers: warn
+  asyncapi-tags: warn
+  asyncapi-unused-components-schema: warn
+  contact-properties: warn
+  info-contact: warn
+  info-description: warn
+  info-license: warn
+  license-url: warn
+  oas3-api-servers: warn
+  oas3-unused-component: warn
+  openapi-tags: warn
