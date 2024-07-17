@@ -8,14 +8,14 @@ extends:
   - spectral:asyncapi
 rules:
   asyncapi-info-contact: warn
-  asyncapi-info-contact-properties: warn
+  asyncapi-info-contact-properties: "off"
   asyncapi-info-description: warn
   asyncapi-info-license: warn
   asyncapi-info-license-url: warn
   asyncapi-servers: warn
   asyncapi-tags: warn
   asyncapi-unused-components-schema: warn
-  contact-properties: warn
+  contact-properties: "off"
   info-contact: warn
   info-description: warn
   info-license: warn
