@@ -329,6 +329,17 @@ rules:
     then:
       field: tags
       function: defined
+  limits-for-numbers-required:
+    description: Numbers should be limited to prevent errors.
+    given:
+      - "#All_Numbers"
+    message: Number properties must have minimum and maximum defined
+    severity: warn
+    then:
+      - field: minimum
+        function: defined
+      - field: maximum
+        function: defined
 
   # Rules for logical / consistency errors
   array-has-items:
