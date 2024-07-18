@@ -435,6 +435,17 @@ rules:
     message: Usage of 'oneOf' is not allowed
     then:
       function: falsy
+  no-allOf:
+    description: >
+      Usage of 'allOf' is not allowed due to conflicts with 'additionalProperties'
+      being set to false (a security requirement).
+      The workaround is to use yaml anchors.
+      See: https://addenergie-flo.atlassian.net/wiki/spaces/BG/pages/920813623/API+Design+Patterns#No-allOf
+    severity: error
+    given: "$..allOf"
+    message: Usage of 'allOf' is not allowed
+    then:
+      function: falsy
   paths-no-file-extensions:
     description: 'Paths must not include `json` or `xml` file extensions.
 
