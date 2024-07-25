@@ -193,7 +193,7 @@ aliases:
       - formats:
           - oas3
         given:
-          - $.paths.*.*[responses,requestBody]..content..schema..properties.*~
+          - $..properties.*~
   Public_Id_Properties:
     description: IDs that are part of paths
     targets:
@@ -884,6 +884,7 @@ rules:
       - "#Property_Keys"
     message: "{{error}}"
     severity: error
+    resolved: false
     then:
       function: casing
       functionOptions:
